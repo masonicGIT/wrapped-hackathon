@@ -11,6 +11,7 @@ import { addresses, abis } from "@project/contracts";
 import GET_TRANSFERS from "./graphql/subgraph";
 
 async function readOnChainData() {
+/*
   // Should replace with the end-user wallet, e.g. Metamask
   const defaultProvider = getDefaultProvider();
   // Create an instance of an ethers.js Contract
@@ -19,6 +20,10 @@ async function readOnChainData() {
   // A pre-defined address that owns some CEAERC20 tokens
   const tokenBalance = await ceaErc20.balanceOf("0x3f8CB69d9c0ED01923F11c829BaE4D9a4CB6c82C");
   console.log({ tokenBalance: tokenBalance.toString() });
+*/
+    const res = await fetch('https://api.nomics.com/v1/currencies/ticker?key=demo-26240835858194712a4f8cc0dc635c7a&ids=WFIL&interval=1d,30d&convert=USD&per-page=100&page=1')
+    const wfilPrice = (await res.json())[0].price
+    console.dir(wfilPrice)
 }
 
 function WalletButton({ provider, loadWeb3Modal, logoutOfWeb3Modal }) {
@@ -75,7 +80,7 @@ class Swapper extends React.Component {
 
 }
 
-function App() {
+function App () {
   const { loading, error, data } = useQuery(GET_TRANSFERS);
   const [provider, loadWeb3Modal, logoutOfWeb3Modal] = useWeb3Modal();
 
@@ -84,10 +89,23 @@ function App() {
   const handleToggle = () => {
     setActive(!isActive)
   }
-    
-  React.useEffect(() => {
+
+    const [filPrice, setFilPrice] = useState(null)
+    const [wfilPrice, setWfilPrice] = useState(null)
+    const fetchData = async () => {
+	const res = await fetch('https://api.nomics.com/v1/currencies/ticker?key=demo-26240835858194712a4f8cc0dc635c7a&ids=WFIL,FIL&convert=USD&per-page=100&page=1')
+	let data = await res.json()
+	let filPrice = Number(data[0].price).toFixed(4)
+	let wfilPrice = Number(data[1].price).toFixed(4)
+	setFilPrice(filPrice)
+	setWfilPrice(wfilPrice)
+    }
+
+
+    React.useEffect(() => {
     if (!loading && !error && data && data.transfers) {
-      console.log({ transfers: data.transfers });
+	fetchData()
+	console.log({ transfers: data.transfers });
     }
   }, [loading, error, data]);
 
@@ -97,10 +115,15 @@ function App() {
       <WalletButton provider={provider} loadWeb3Modal={loadWeb3Modal} logoutOfWeb3Modal={logoutOfWeb3Modal} />
       </Header>
 	<Body>
-	<Swapper/>
-        <Button hidden onClick={() => readOnChainData()}>
-          Read On-Chain Balance
-        </Button>
+	    <h2>Filecoin Price: { filPrice }</h2>
+	    <h2>Wrapped Filecoin Price: { wfilPrice }</h2>
+	    <h3>Percentage Diff: { ((wfilPrice - filPrice)/wfilPrice).toFixed(4)} %</h3>
+	    <h3>Price Diff: { ((wfilPrice - filPrice)).toFixed(4)} $</h3>
+	    <h3></h3>
+	    <Swapper/>
+            <Button onClick={() => readOnChainData()}>
+		Read On-Chain Balance
+            </Button>
       </Body>
     </div>
   );
